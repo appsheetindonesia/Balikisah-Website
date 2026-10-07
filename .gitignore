@@ -1,0 +1,9 @@
+# Scratch / temp dari alat build & verifikasi (snapshot live, potongan JS, log)
+.freebuff/tmp/
+
+# Bytecode Python
+__pycache__/
+*.pyc
+
+# Cadangan lokal (safety net pengembangan, tidak untuk repo)
+*.bak
