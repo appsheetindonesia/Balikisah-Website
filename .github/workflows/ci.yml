@@ -115,6 +115,13 @@ jobs:
         run: |
           set -uo pipefail
           ls -l index.html rss.xml sitemap.xml robots.txt
-          if grep -q "position:sticky" index.html; then
-            echo "::warning::index.html memuat position:sticky - pernah jadi bug (sidebar Populer Minggu Ini), pastikan memang disengaja."
+          # Peringatan ini khusus selector yang PERNAH jadi bug, bukan semua sticky.
+          # .docs__side memang sticky sejak commit awal (rail daftar isi dokumen,
+          # sudah position:static di <=820px) dan itu disengaja - memperingatkan itu
+          # hanya membuat peringatan ini diabaikan orang.
+          # Baris di-flatten dulu supaya aturan yang tertulis multi-baris tetap kena.
+          if tr -d '\n' < index.html | grep -Eo "\.home-side__panel\{[^}]*position: *sticky" >/dev/null; then
+            echo "::warning::home-side__panel kembali sticky - inilah penyebab bug sidebar 'Populer Minggu Ini' yang diperbaiki di 523d65e. Sengaja?"
+          else
+            echo "home-side__panel tidak sticky (bug 523d65e tidak kambuh)"
           fi
