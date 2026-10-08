@@ -1629,3 +1629,15 @@ Empat keputusan desain yang perlu diketahui:
   kosong dan `status=$?` sesudah `if ! cmd` selalu 0, sehingga suite yang tidak
   jalan justru dilaporkan lulus. Keluaran ditulis ke berkas dulu, kode keluar dibaca
   langsung, baru diperiksa dengan `grep`.
+
+**Bukti dari runner asli** (run `37782353913` di commit `42fa510`, semuanya
+`success` dalam 11 langkah, keluaran runner: `python 3.13.15 | markdown 3.11 |
+Pillow 12.0.0`):
+
+- Sisi positif: `OK index.html / rss.xml / sitemap.xml / robots.txt cocok dengan
+  hasil build` — jadi build di Linux byte-identik dengan blob yang di-commit.
+- Sisi negatif (yang justru inti gerbang ini): di branch sementara `ci-drift-probe`
+  (commit `685a50e`, hanya `site_shell.html` diubah tanpa rebuild, `main` tidak
+  disentuh) CI berhenti tepat di `Cek drift artifacts terhadap hasil build` dengan
+  `conclusion: failure`. Branch sudah dihapus setelah uji. Tanpa uji ini, gerbang
+  hanya terbukti "tidak menyesatkan", bukan "menangkap".
