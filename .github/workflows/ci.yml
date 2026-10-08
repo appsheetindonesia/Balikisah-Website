@@ -1,0 +1,120 @@
+name: CI
+
+# Situs ini ditayangkan GitHub Pages dari berkas index.html yang TER-COMMIT
+# (legacy branch build), jadi artifacts yang basi bisa ikut tayang tanpa ada
+# yang tahu. Workflow ini menutup lubang itu: build ULANG dari sumber dan
+# bandingkan dengan yang ter-commit.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Versi Python dan pustaka DIKUNCI, bukan dilepas bebas: cek drift di
+      # bawah membandingkan byte hasil build dengan byte yang ter-commit, dan
+      # markdown / Pillow / versi Unicode interpreter ikut menentukan byte itu.
+      # Kalau menaikkan salah satunya, bangun ulang + commit index.html di commit
+      # yang sama.
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # build_site.py butuh markdown (render 9 dokumen) dan Pillow
+      # (mengubah foto WhatsApp jadi data URL). Selain ini hanya stdlib.
+      - name: Pasang dependensi build
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "markdown==3.11" "Pillow==12.0.0"
+          python -c "import markdown, PIL, sys; print('python', sys.version.split()[0], '| markdown', markdown.__version__, '| Pillow', PIL.__version__)"
+
+      # build_site.py sudah menjalankan ketiga test suite di dalam prosesnya,
+      # dan keluar non-zero bila ada yang gagal.
+      - name: Build situs (build_site.py)
+        run: PYTHONIOENCODING=utf-8 python .freebuff/build_site.py
+
+      # Inti permintaan: index.html yang ter-commit harus identik dengan hasil
+      # build sumbernya. Kalau tidak, Pages menayangkan versi basi.
+      # Perbandingan dinormalisasi ke LF karena core.autocrlf=true di Windows
+      # (working tree CRLF, blob di repo LF).
+      - name: Cek drift artifacts terhadap hasil build
+        run: |
+          set -euo pipefail
+          drift=0
+          for f in index.html rss.xml sitemap.xml robots.txt; do
+            want=$(git show "HEAD:$f" | tr -d '\r' | sha256sum | cut -d' ' -f1)
+            got=$(tr -d '\r' < "$f" | sha256sum | cut -d' ' -f1)
+            if [ "$want" = "$got" ]; then
+              echo "OK   $f cocok dengan hasil build"
+            else
+              echo "::error file=$f::$f tidak cocok dengan hasil build sumber. Jalankan 'python .freebuff/build_site.py' lalu commit hasilnya (bila baru mengubah sumber), atau samarkan versi python/markdown/Pillow bila perbedaan datang dari sana."
+              drift=1
+            fi
+          done
+          if [ "$drift" -ne 0 ]; then exit 1; fi
+
+      # Dijalankan ulang satu per satu (permintaan eksplisit) supaya kegagalan
+      # menunjuk suite mana yang bermasalah, bukan sekadar "build gagal".
+      - name: Test suite - konversi tautan Drive
+        run: PYTHONIOENCODING=utf-8 python .freebuff/test_drive_links.py
+
+      - name: Test suite - regresi editor
+        run: PYTHONIOENCODING=utf-8 python .freebuff/test_editor_regression.py
+
+      # test_layout_responsive keluar 0 SAAT DILEWATI bila tidak ada browser
+      # headless. Di CI itu harus dianggap kegagalan, bukan hijau palsu.
+      # Catatan: keluaran TIDAK dialirkan lewat pipe. Pipeline membuat kode keluar
+      # suite sulit diambil dengan benar (PIPESTATUS kosong di sini, dan `status=$?`
+      # sesudah `if ! cmd` selalu 0), jadi keluaran ditulis ke berkas lalu kode
+      # keluar dibaca langsung. Tiga jalur hijau palsu ditutup: suite error,
+      # suite dilewati, dan suite lulus tanpa melaporkan baris LULUS.
+      - name: Test suite - tata letak responsif (wajib jalan, bukan dilewati)
+        run: |
+          set +e
+          out=/tmp/layout.log
+          PYTHONIOENCODING=utf-8 python .freebuff/test_layout_responsive.py >"$out" 2>&1
+          status=$?
+          set -e
+          cat "$out"
+          if [ "$status" -ne 0 ]; then
+            echo "::error::test_layout_responsive GAGAL (exit $status)."
+            exit "$status"
+          fi
+          if grep -q "LULUS (dilewati)" "$out"; then
+            echo "::error::test_layout_responsive DILEWATI: tidak ada browser headless di runner ini, jadi uji tata letak tidak benar-benar dijalankan."
+            exit 1
+          fi
+          if ! grep -q "test_layout_responsive: LULUS" "$out"; then
+            echo "::error::test_layout_responsive keluar 0 tapi tidak melaporkan LULUS - keluaran tidak dikenal, dianggap belum terverifikasi."
+            exit 1
+          fi
+          echo "test_layout_responsive: berjalan penuh, bukan dilewati"
+
+      - name: Verifier - 9 dokumen kebutuhan
+        run: PYTHONIOENCODING=utf-8 python .freebuff/verify_docs.py
+
+      - name: Verifier - chrome situs (label lama)
+        run: PYTHONIOENCODING=utf-8 python .freebuff/verify_chrome.py
+
+      - name: Ringkasan artifacts
+        run: |
+          set -uo pipefail
+          ls -l index.html rss.xml sitemap.xml robots.txt
+          if grep -q "position:sticky" index.html; then
+            echo "::warning::index.html memuat position:sticky - pernah jadi bug (sidebar Populer Minggu Ini), pastikan memang disengaja."
+          fi

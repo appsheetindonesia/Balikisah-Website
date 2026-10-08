@@ -1585,3 +1585,47 @@ sorotan menu pindah ke “Tambah Baru”. Snapshot aksesibilitas menampilkan
 Suite: 159 PASS / 0 FAIL, `verify_docs.py` dan `verify_chrome.py` exit 0.
 Tangkapan layar pratinjau tidak bisa diambil pada sesi ini (webview tidak
 terkomposit), jadi bukti visual diganti pengukuran DOM di atas.
+
+## CI: GitHub Actions (8 Okt 2026)
+
+`.github/workflows/ci.yml` berjalan pada setiap `push`, `pull_request`, dan
+`workflow_dispatch`. Alasannya spesifik untuk proyek ini: GitHub Pages memakai
+*legacy branch build*, jadi yang tayang adalah `index.html` **yang ter-commit**,
+bukan hasil build. Kalau berkas itu tertinggal dari `site_shell.html`, situs
+publik ikut basi tanpa ada yang tahu.
+
+**Cara menjalankan langkah CI di mesin sendiri** ( sama persis dengan workflow):
+
+```
+python -m pip install "markdown==3.11" "Pillow==12.0.0"
+PYTHONIOENCODING=utf-8 python .freebuff/build_site.py
+PYTHONIOENCODING=utf-8 python .freebuff/test_drive_links.py
+PYTHONIOENCODING=utf-8 python .freebuff/test_editor_regression.py
+PYTHONIOENCODING=utf-8 python .freebuff/test_layout_responsive.py
+PYTHONIOENCODING=utf-8 python .freebuff/verify_docs.py
+PYTHONIOENCODING=utf-8 python .freebuff/verify_chrome.py
+```
+
+Empat keputusan desain yang perlu diketahui:
+
+- **Cek drift** membandingkan hash SHA-256 artefak hasil build dengan blob-nya di
+  `HEAD` (`index.html`, `rss.xml`, `sitemap.xml`, `robots.txt`), keduanya
+  dinormalisasi ke LF. Normalisasi ini wajib, bukan hiasan: `core.autocrlf=true`
+  membuat working tree Windows ber-CRLF (14.855 CR) sementara blob di repo ber-LF
+  (0 CR) — tanpa normalisasi cek ini gagal palsu di setiap run.
+- **Versi dikunci** (`markdown==3.11`, `Pillow==12.0.0`, Python 3.13) karena cek
+  drift membandingkan **byte**, dan renderer markdown ikut menentukan byte itu.
+  Naikkan pustaka = bangun ulang + commit artefak di commit yang sama.
+- Build **deterministik** (terukur): tiga kali build menghasilkan
+  `d2e41c49…`, dan hasil build yang dinormalisasi LF identik byte dengan blob
+  `HEAD` (`b1b580cd…`). `rss.xml`/`sitemap.xml` aman dari ini karena tanggalnya
+  diambil dari tanggal artikel (mis. `Tue, 21 Nov 2023`), bukan waktu build.
+- `test_layout_responsive` **keluar 0 saat dilewati** bila tidak ada browser
+  headless. Workflow tetap gagal supaya CI tidak pernah hijau palsu. Tiga jalur
+  hijau palsu ditutup dan diuji satu per satu dengan interpreter palsu:
+  suite error (kode keluar diteruskan, terukur exit 3), suite dilewati (exit 1),
+  dan suite keluar 0 tanpa melaporkan baris `LULUS` (exit 1).
+  Langkah ini sengaja **tidak** memakai pipe ke `tee`: saat dicoba, `PIPESTATUS[0]`
+  kosong dan `status=$?` sesudah `if ! cmd` selalu 0, sehingga suite yang tidak
+  jalan justru dilaporkan lulus. Keluaran ditulis ke berkas dulu, kode keluar dibaca
+  langsung, baru diperiksa dengan `grep`.
