@@ -1641,3 +1641,32 @@ Pillow 12.0.0`):
   disentuh) CI berhenti tepat di `Cek drift artifacts terhadap hasil build` dengan
   `conclusion: failure`. Branch sudah dihapus setelah uji. Tanpa uji ini, gerbang
   hanya terbukti "tidak menyesatkan", bukan "menangkap".
+## Branch protection `main` — gerbang CI kini mengunci merge
+
+Protection diaktifkan via API GitHub tanggal 9 Okt 2026 (`PUT /branches/main/protection`, HTTP 200):
+
+- `required_status_checks`: status check `build-test-verify` (job CI) **wajib sukses**,
+  `strict: true` (branch harus mutakhir dengan `main` sebelum merge).
+- `enforce_admins: true` — **berlaku juga untuk admin** (disepakati eksplisit; bila
+  ada perbaikan darurat ketika CI macet, matikan sementara lewat pengaturan repo,
+  lalu nyalakan lagi).
+- `allow_force_pushes: false`, `allow_deletions: false`. Review PR dan restriction
+  kosong (tidak dipakai).
+
+**Verifikasi lewat API (hasil GET, bukan hanya mengulang balasan PUT):**
+
+- `GET /branches/main/protection` → `strict=true`, `contexts=['build-test-verify']`,
+  `enforce_admins.enabled=true`, `force_pushes=false`, `deletions=false`.
+- `GET /branches/main` → `protected=true`, `protection_url` terisi.
+
+**Verifikasi end-to-end bahwa CI merah benar-benar memblokir merge** (PR probe #1,
+branch dan PR dibersihkan setelah uji, `main` tak disentuh):
+
+1. Branch `ci-gate-probe` (commit `ab01fb4`) memuat perubahan `site_shell.html`
+   **tanpa rebuild** sehingga `index.html` basi dan CI sengaja merah.
+2. `GET /commits/<sha>/check-runs` → `build-test-verify: failure` (cek drift yang menahan).
+3. `GET /pulls/1` → `mergeable_state: blocked` (dengan `mergeable: true`, artinya
+   blokir datang dari status check, bukan dari konflik).
+4. `PUT /pulls/1/merge` → **HTTP 405**, pesan resmi dari GitHub:
+   `Required status check "build-test-verify" is failing.`
+5. PR #1 ditutup tanpa merge (`merged: false`), branch remote (HTTP 204) dan lokal dihapus.
