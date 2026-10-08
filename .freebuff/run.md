@@ -1528,3 +1528,60 @@ ini.
 Catatan: angka di tabel ini sebelumnya saya tulis dari ingatan dan **salah**
 (tertulis `--ink-300: 14,9 → 14,3` dan `--ink-500: 4,3 → 4,1`); versi di atas
 dihitung ulang dengan rumus luminansi WCAG.
+
+### Navigasi editorial admin ala WordPress (8 Okt 2026)
+
+**Masalah.** Tab dasbor lama berupa deret pil horizontal (`.dash__tabs`) tanpa
+hierarki: “Tulis artikel”, “Daftar artikel”, “Media”, dan seterusnya berdiri
+sederajat, sehingga tidak ada menu khusus untuk alur menulis artikel.
+
+**Desain.** Deret pil itu diganti dua kolom:
+
+```
+.dash-shell   grid: 236px | minmax(0,1fr)   gap 24px
+├── nav.dash-menu (sidebar kiri)
+│   ARTIKEL  → Semua Artikel · Tambah Baru · Kategori & Tag · Sampah
+│   SITUS    → Media · Komentar · Tampilan · Pengaturan
+└── .dash-body (area kerja, berisi 8 `.dash__pane`)
+```
+
+Keputusan penting: **tidak ada logika tab yang berubah**. Setiap item menu tetap
+membawa atribut `data-dash-tab` yang lama (`write`, `list`, `media`, `terms`,
+`comments`, `trash`, `appearance`, `settings`), jadi handler yang sudah ada,
+`window.__dashTab`, dan `mod_admin.js` (yang memanggil
+`querySelector('[data-dash-tab="write"]')`) tetap bekerja tanpa penyesuaian.
+Pemetaan 8 pane pun utuh — tidak ada pane yang hilang.
+
+Tambahan kecil:
+
+- `aria-current="page"` disinkronkan bersama `aria-selected` agar item aktif
+  terbaca jelas oleh pembaca layar.
+- Tombol primer **Tambah Baru** di dalam pane “Semua Artikel” memakai atribut
+  `data-dash-to="write"` dan men-klik item menu yang sama (bukan memanggil pane
+  langsung), supaya sorotan menu tetap konsisten dengan pane yang tampil.
+- Sidebar **tidak sticky** — konsisten dengan perbaikan bug sidebar beranda.
+
+**Responsif.** Di `@media (max-width:1024px)` sidebar berubah menjadi deret
+horizontal `overflow-x:auto` dan judul grup disembunyikan. Breakpoint 1024 (bukan
+1023) dipilih setelah pengukuran: pada `window.innerWidth === 1023`, Chrome
+mengevaluasi media query terhadap lebar layout viewport (1024) sehingga
+`max-width:1023px` **tidak** kena pada batas itu (terukur `matchMedia('(max-width:1023px)').matches === false`, sementara `max-width:1024px` true).
+
+**Verifikasi (terukur di browser, bukan perkiraan):**
+
+| Lebar | `grid-template-columns` | Arah menu | Overflow halaman |
+| --- | --- | --- | --- |
+| 1280 | `236px 808px` | kolom | 0 |
+| 1023 | `974.667px` | baris (satu baris, 36px tinggi) | 0 |
+| 390 | `341.333px` | baris + bisa digulir mendatar | 0 |
+
+Klik kedelapan item menu diuji satu per satu: setiap kali hanya satu pane yang
+`display !== none` dan `aria-current` mengikuti (`dashWrite`, `dashList`,
+`dashTerms`, `dashMedia`, `dashComments`, `dashTrash`, `dashAppearance`,
+`dashSettings`). Pintasan “Tambah Baru” juga diuji: `dashList → dashWrite`,
+sorotan menu pindah ke “Tambah Baru”. Snapshot aksesibilitas menampilkan
+`tablist "Menu dasbor redaksi"` dengan judul grup `ARTIKEL` dan `SITUS`.
+
+Suite: 159 PASS / 0 FAIL, `verify_docs.py` dan `verify_chrome.py` exit 0.
+Tangkapan layar pratinjau tidak bisa diambil pada sesi ini (webview tidak
+terkomposit), jadi bukti visual diganti pengukuran DOM di atas.

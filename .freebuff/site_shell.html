@@ -767,12 +767,30 @@ img{max-width:100%;display:block}
 .dash__head{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;margin:0 0 6px}
 .dash__title{font:800 clamp(22px,2vw + 8px,32px)/1.2 var(--font-display);color:var(--ink-900);margin:0}
 .dash__sub{font:400 14px/1.6 var(--font-ui);color:var(--ink-500);margin:0 0 22px;max-width:80ch}
-.dash__tabs{display:flex;gap:8px;margin:0 0 20px;flex-wrap:wrap}
-.dash__tab{border:1px solid var(--border-card);background:#fff;border-radius:var(--radius-pill);
-  padding:9px 18px;font:500 13px/1 var(--font-ui);color:var(--ink-500);cursor:pointer}
-.dash__tab[aria-selected="true"]{background:var(--accent-chip);border-color:var(--accent-chip);color:#fff}
+/* navigasi editorial ala WordPress: sidebar kiri + area kerja */
+.dash-shell{display:grid;grid-template-columns:236px minmax(0,1fr);gap:24px;align-items:start}
+.dash-menu{display:flex;flex-direction:column;gap:2px;background:var(--surface);
+  border:1px solid var(--border-card);border-radius:14px;padding:10px;box-shadow:var(--shadow-card)}
+.dash-menu__h{font:700 11px/1.4 var(--font-ui);text-transform:uppercase;letter-spacing:.06em;
+  color:var(--ink-400);margin:14px 8px 6px}
+.dash-menu__h:first-child{margin-top:4px}
+.dash-menu__item{border:1px solid transparent;border-left:3px solid transparent;background:none;
+  border-radius:9px;text-align:left;padding:9px 12px;font:500 13px/1.3 var(--font-ui);
+  color:var(--ink-500);cursor:pointer}
+.dash-menu__item:hover{background:var(--bg-soft);color:var(--ink-900)}
+.dash-menu__item[aria-selected="true"]{background:var(--accent-chip);color:#fff;font-weight:700;
+  border-left-color:var(--gold)}
+.dash-body{min-width:0}
 .dash__pane{display:none}
 .dash__pane[hidden="false"],.dash__pane:not([hidden]){display:block}
+/* ≤1024px: sidebar jadi deret horizontal yang bisa digulir mendatar */
+@media (max-width:1024px){
+  .dash-shell{grid-template-columns:1fr;gap:16px}
+  .dash-menu{flex-direction:row;flex-wrap:nowrap;overflow-x:auto;gap:6px;padding:8px}
+  .dash-menu__h{display:none}
+  .dash-menu__item{white-space:nowrap;padding:8px 14px;border-left:0;border-bottom:3px solid transparent}
+  .dash-menu__item[aria-selected="true"]{border-bottom-color:var(--gold)}
+}
 .dash-editor{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}
 @media (max-width:940px){.dash-editor{grid-template-columns:1fr}}
 /* urutan ala WordPress: judul → permalink → editor → aksi → meta bawah */
@@ -849,7 +867,7 @@ html[data-theme="dark"] .docs__main{background:#221E16;color:var(--ink-700)}
    putih tidak terbaca pada mode gelap (diukur: 1.1–2.2:1). */
 html[data-theme="dark"] .dash-editor__main .field input,
 html[data-theme="dark"] .dash-editor__main .field select{background:#221E16;color:var(--ink-700)}
-html[data-theme="dark"] .dash__tab:not([aria-selected="true"]),
+html[data-theme="dark"] .dash-menu__item:not([aria-selected="true"]),
 html[data-theme="dark"] .ed-status__pill:not([aria-pressed="true"]),
 html[data-theme="dark"] .chips--pick button:not([aria-pressed="true"]),
 html[data-theme="dark"] .btn--ghost{background:#221E16;color:var(--ink-500)}
@@ -1012,8 +1030,7 @@ html[data-theme="dark"] .ed-fold{background:#221E16}
 /* ---------- editor di layar kecil ---------- */
 @media (max-width:640px){
   .dash{padding:18px var(--gutter) 64px}
-  .dash__tabs{flex-wrap:nowrap;overflow-x:auto;margin-bottom:16px;padding-bottom:4px}
-  .dash__tab{white-space:nowrap;padding:8px 14px}
+  .dash-menu__item{padding:8px 12px}
   .ed-toolbar{gap:2px;padding:5px 6px}
   .ed-toolbar button{min-width:34px;min-height:32px;padding:6px 8px}
   .ed-cols{gap:12px}
@@ -1976,16 +1993,20 @@ __DOCS__
       tautan, berkas komputer, atau Google Drive — persis seperti “Kelola Foto”, tapi otomatis
       melekat ke artikel yang sedang diedit.</p>
 
-    <div class="dash__tabs" role="tablist">
-      <button class="dash__tab" role="tab" aria-selected="true" data-dash-tab="write" type="button">Tulis artikel</button>
-      <button class="dash__tab" role="tab" aria-selected="false" data-dash-tab="list" type="button">Daftar artikel</button>
-      <button class="dash__tab" role="tab" aria-selected="false" data-dash-tab="media" type="button">Media</button>
-      <button class="dash__tab" role="tab" aria-selected="false" data-dash-tab="terms" type="button">Kategori &amp; Tag</button>
-      <button class="dash__tab" role="tab" aria-selected="false" data-dash-tab="comments" type="button">Komentar</button>
-      <button class="dash__tab" role="tab" aria-selected="false" data-dash-tab="trash" type="button">Sampah</button>
-      <button class="dash__tab" role="tab" aria-selected="false" data-dash-tab="appearance" type="button">Tampilan</button>
-      <button class="dash__tab" role="tab" aria-selected="false" data-dash-tab="settings" type="button">Pengaturan</button>
-    </div>
+    <div class="dash-shell">
+      <nav class="dash-menu" role="tablist" aria-orientation="vertical" aria-label="Menu dasbor redaksi">
+        <p class="dash-menu__h">Artikel</p>
+        <button class="dash-menu__item" role="tab" aria-selected="false" data-dash-tab="list" type="button">Semua Artikel</button>
+        <button class="dash-menu__item" role="tab" aria-selected="true" data-dash-tab="write" type="button">Tambah Baru</button>
+        <button class="dash-menu__item" role="tab" aria-selected="false" data-dash-tab="terms" type="button">Kategori &amp; Tag</button>
+        <button class="dash-menu__item" role="tab" aria-selected="false" data-dash-tab="trash" type="button">Sampah</button>
+        <p class="dash-menu__h">Situs</p>
+        <button class="dash-menu__item" role="tab" aria-selected="false" data-dash-tab="media" type="button">Media</button>
+        <button class="dash-menu__item" role="tab" aria-selected="false" data-dash-tab="comments" type="button">Komentar</button>
+        <button class="dash-menu__item" role="tab" aria-selected="false" data-dash-tab="appearance" type="button">Tampilan</button>
+        <button class="dash-menu__item" role="tab" aria-selected="false" data-dash-tab="settings" type="button">Pengaturan</button>
+      </nav>
+      <div class="dash-body">
 
     <div class="dash__pane" id="dashWrite" hidden="false">
       <div class="dash-editor">
@@ -2166,6 +2187,7 @@ __DOCS__
 
     <div class="dash__pane" id="dashList" hidden="true">
       <div class="btn-row" id="listTools">
+        <button class="btn btn--primary" type="button" data-dash-to="write">Tambah Baru</button>
         <input id="listSearch" type="search" placeholder="Cari judul/penulis…" aria-label="Cari artikel"
                style="flex:1;min-width:200px;border:1px solid var(--border-card);border-radius:9px;padding:9px 11px;font:400 13px/1.4 var(--font-ui);background:#FFFFFF">
         <select id="listStatus" aria-label="Saring status" style="border:1px solid var(--border-card);border-radius:9px;padding:9px 11px;font:400 13px/1.4 var(--font-ui)">
@@ -2317,6 +2339,8 @@ __DOCS__
         </div>
       </div>
     </div>
+      </div><!-- /.dash-body -->
+    </div><!-- /.dash-shell -->
   </main>
 
   <footer class="site-footer">
@@ -4165,6 +4189,7 @@ __DOCS__
         var which = t.getAttribute("data-dash-tab");
         document.querySelectorAll("[data-dash-tab]").forEach(function(x){
           x.setAttribute("aria-selected", String(x === t));
+          if (x === t) x.setAttribute("aria-current", "page"); else x.removeAttribute("aria-current");
         });
         var PANES = {write:"dashWrite", list:"dashList", media:"dashMedia", terms:"dashTerms",
                      comments:"dashComments", trash:"dashTrash", appearance:"dashAppearance",
@@ -4175,6 +4200,15 @@ __DOCS__
         });
         if (which === "list") renderAdminList();
         if (window.__dashTab) window.__dashTab(which);
+      });
+    });
+
+    /* Pintasan "Tambah Baru" di daftar artikel memakai item menu yang sama
+       supaya sorotan menu tetap sinkron dengan pane yang tampil. */
+    document.querySelectorAll("[data-dash-to]").forEach(function(b){
+      b.addEventListener("click", function(){
+        var target = document.querySelector('[data-dash-tab="' + b.getAttribute("data-dash-to") + '"]');
+        if (target) target.click();
       });
     });
 
