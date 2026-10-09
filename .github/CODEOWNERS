@@ -1,0 +1,21 @@
+# CODEOWNERS untuk repository Balikisah-Website
+# Digunakan oleh GitHub untuk menugaskan peninjau PR secara otomatis dan membantu pelacak tanggung jawab.
+# Referensi:
+# - @appsheetindonesia (pemilik repo, URL remote: https://github.com/appsheetindonesia/Balikisah-Website.git)
+# - CI Actions ($GITHUB_ACTIONS) dijalankan oleh tim platform, bukan pemilik repo secara langsung.
+# - Branch protection untuk `main` (lihat .freebuff/run.md) memblokir merge kecuali CI lulus.
+
+# Semua perubahan harus ditinjau oleh pemilik repo (owner).
+# Jika alur ini tidak diperlukan, matikan "require PR reviews" di branch protection.
+# Kode terkait .github, .freebuff, dan repo
+*                 @appsheetindonesia
+.github/           @appsheetindonesia
+.github/workflows/ @appsheetindonesia
+.github/PULL_REQUEST_TEMPLATE.md @appsheetindonesia
+.freebuff/         @appsheetindonesia
+README.md         @appsheetindonesia
+LICENSE           @appsheetindonesia
+index.html        @appsheetindonesia
+rss.xml           @appsheetindonesia
+sitemap.xml       @appsheetindonesia
+robots.txt        @appsheetindonesia

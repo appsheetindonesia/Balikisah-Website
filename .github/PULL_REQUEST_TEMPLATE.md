@@ -14,6 +14,7 @@ Jelaskan secara singkat apa yang diubah dan mengapa.
 - [ ] Cek drift lulus (index.html/rss.xml/sitemap.xml/robots.txt)
 - [ ] Test suite relevan lulus (test_drive_links/test_editor_regression/test_layout_responsive)
 - [ ] Verifier relevan lulus (verify_docs/verify_chrome) jika ada perubahan UI
+- [ ] Review ditugaskan via CODEOWNERS (pemilik repo) - diperlukan untuk merge (lihat .github/CODEOWNERS)
 - [ ] Tidak mengikutsertakan file lokal (.freebuff/tmp/*)
 - [ ] Dokumentasi diperbarui jika perlu
 
