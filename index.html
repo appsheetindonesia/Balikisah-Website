@@ -10675,6 +10675,10 @@ Article  ──N:1──&gt; Media (coverImage)
   }
 
   /* ---------------- card rendering ---------------- */
+  /* Beranda menampilkan 8 artikel terbaru; sisanya lewat "Lihat Semua" /
+     paginasi arsip. Angka ini sengaja tidak ikut PUBLISHED penuh. */
+  var HOME_FEED_COUNT = 8;
+
   /* Kartu "Arsip Sejarah Terkini" — markup 1:1 dengan balikisah.com:
      foto h-40 -> judul serif 18px -> excerpt 2 baris -> chip kategori ->
      baris penulis (avatar + nama + tanggal lengkap). */
@@ -12996,7 +13000,7 @@ Article  ──N:1──&gt; Media (coverImage)
       el.setAttribute("data-chip", PUBLISHED[i] && PUBLISHED[i].c);
     });
     applyFilter();
-    renderGrid(document.getElementById("homeGrid"), PUBLISHED, 0);
+    renderGrid(document.getElementById("homeGrid"), PUBLISHED.slice(0, HOME_FEED_COUNT), 0);
     renderHomeExtras();
     renderGrid(document.getElementById("relatedGrid"), PUBLISHED.slice(1,5), 1);
     syncPhotos();
@@ -13303,7 +13307,7 @@ Article  ──N:1──&gt; Media (coverImage)
   });
   applyFilter();
 
-  renderGrid(document.getElementById("homeGrid"), PUBLISHED, 0);
+  renderGrid(document.getElementById("homeGrid"), PUBLISHED.slice(0, HOME_FEED_COUNT), 0);
   renderHomeExtras();
   renderGrid(document.getElementById("relatedGrid"), PUBLISHED.slice(1,5), 1);
 
