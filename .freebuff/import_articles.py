@@ -98,6 +98,32 @@ def conv_date(raw):
     return "%s %s %s" % (day, MONTHS.get(mon, mon), year)
 
 
+def full_month_name(short):
+    """'Oct' -> 'Oktober' (nama panjang Indonesia, seperti halaman live)."""
+    EN = {
+        "Jan": "Januari", "Feb": "Februari", "Mar": "Maret", "Apr": "April",
+        "May": "Mei", "Jun": "Juni", "Jul": "Juli", "Aug": "Agustus",
+        "Sep": "September", "Oct": "Oktober", "Nov": "November", "Dec": "Desember",
+    }
+    # terima juga bentuk pendek Indonesia (Okt/Agu/Des) supaya idempoten
+    EN.update({"Mei": "Mei", "Agu": "Agustus", "Okt": "Oktober", "Des": "Desember"})
+    return EN.get(short, short)
+
+
+def conv_date_full(raw):
+    """'3, Oct, 2026, 19:09:09' -> '3, Oktober, 2026, 19:09:09'.
+
+    Bentuk lengkap yang dipakai halaman live (termasuk jam), untuk kartu
+    "Arsip Sejarah Terkini". Kunci 'date' tetap bentuk pendek supaya
+    RSS/sitemap dan parse_date() di build_site.py tidak berubah.
+    """
+    m = re.match(r"^\s*(\d{1,2}),\s*([A-Za-z]{3})[a-z]*,?\s+(\d{4}),\s+(\d{1,2}:\d{2}:\d{2})", raw or "")
+    if not m:
+        return conv_date(raw)
+    day, mon, year, clock = m.group(1), m.group(2).title(), m.group(3), m.group(4)
+    return "%s, %s, %s, %s" % (day, full_month_name(mon), year, clock)
+
+
 def strip_tags(text):
     """Buang tag HTML yang tidak dikenali (mis. <span>, <div>) tapi pertahankan isi."""
     return re.sub(r"</?(?:span|div|section|figure|figcaption|table|thead|tbody|tr|td|th|small|font|u|sup|sub)[^>]*>", "", text)
@@ -204,6 +230,7 @@ def main():
             "excerpt": fix_identity(excerpt),
             "body": fix_identity(body),
             "date": conv_date(a.get("date")),
+            "dateFull": conv_date_full(a.get("date")),
             "photo": image if re.match(r"^https?://", image) else "",
         })
 

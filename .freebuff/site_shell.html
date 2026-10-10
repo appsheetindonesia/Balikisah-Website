@@ -110,6 +110,7 @@ img{max-width:100%;display:block}
    Kelola Foto TIDAK ikut karena keduanya alat ukur, bukan foto artikel. */
 .article-card__img,.article-hero,.home-hero__card img,.hero-side img,
 .promo-card img,.side-card img,.galeri-card img,.tokoh-card img,
+.arch-card__img,
 .bp-card img,.prose__img{
   filter:var(--photo-filter);
   transition:filter .4s ease;
@@ -117,6 +118,9 @@ img{max-width:100%;display:block}
 /* hover maupun focus-within (aksesibilitas keyboard) sama-sama memunculkan
    warna asli; `a:hover img` mengikuti pola live untuk foto di dalam taut. */
 .article-card__img:hover,
+.arch-card__img:hover,
+.arch-card:hover .arch-card__img,
+.arch-card a:focus-visible .arch-card__img,
 .article-card:hover .article-card__img,
 .article-card a:hover .article-card__img,
 .article-card:focus-within .article-card__img,
@@ -492,6 +496,46 @@ a:hover > .article-hero,
 .title-link:hover{color:var(--accent-hover)}
 .home-arsip__cards{display:grid;grid-template-columns:1fr;gap:24px}
 @media (min-width:768px){.home-arsip__cards{grid-template-columns:repeat(2,1fr)}}
+
+/* Kartu vertikal "Arsip Sejarah Terkini" — 1:1 dengan balikisah.com.
+   Nilai diukur dari DOM live: bg putih, radius 16px (rounded-2xl),
+   border #ebd9c2, padding 12px (p-3), shadow-sm -> hover:shadow-md,
+   foto h-40 (160px) object-cover rounded-xl, judul serif 18px,
+   excerpt 14px 2 baris, chip kategori uppercase, baris penulis
+   (avatar 24px + nama 13px bold + tanggal 11px). */
+.arch-card{background:var(--surface);border-radius:16px;overflow:hidden;
+  border:1px solid var(--border-card);padding:12px;
+  box-shadow:0 1px 2px rgba(40,28,18,.06);
+  transition:box-shadow .2s ease,transform .2s ease}
+.arch-card:hover{box-shadow:0 4px 6px -1px rgba(40,28,18,.12),0 2px 4px -2px rgba(40,28,18,.10);
+  transform:translateY(-2px)}
+.arch-card a{text-decoration:none;color:inherit;display:block}
+.arch-card__img{width:100%;height:160px;object-fit:cover;border-radius:12px;
+  display:block;background:var(--bg-soft)}
+.arch-card__body{margin-top:12px}
+.arch-card__title{font:700 18px/1.375 var(--font-display);color:var(--ink-900);
+  margin:0 0 8px;transition:color .15s ease;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.arch-card:hover .arch-card__title,.arch-card a:focus-visible .arch-card__title{color:var(--accent)}
+.arch-card__excerpt{font:400 14px/1.55 var(--font-ui);color:var(--ink-500);margin:0 0 12px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* chip kategori (uppercase, kecil) */
+.arch-card__chip{display:inline-block;font:700 12px/1 var(--font-ui);
+  background:var(--chip-fill);color:var(--accent);border:1px solid var(--border-card);
+  border-radius:6px;padding:5px 8px;text-transform:uppercase;
+  letter-spacing:.02em;user-select:none;transition:background .15s ease}
+.arch-card__chip:hover{background:var(--border-card);text-decoration:underline}
+/* baris penulis: avatar inisial + nama + tanggal */
+.arch-card__byline{display:flex;align-items:center;gap:8px;margin-top:16px;
+  font:400 13px/1.35 var(--font-ui);color:var(--ink-500)}
+.arch-card__avatar{flex:none;width:24px;height:24px;border-radius:9999px;
+  object-fit:cover;background:var(--chip-fill);
+  display:inline-flex;align-items:center;justify-content:center;
+  font:700 10px/1 var(--font-ui);color:var(--accent);letter-spacing:.02em}
+.arch-card__avatar--img{padding:0;background:none}
+.arch-card__who{font:700 13px/1.35 var(--font-ui);color:var(--ink-900);margin:0}
+.arch-card__when{font:400 11px/1.35 var(--font-ui);color:var(--ink-400);margin:0}
+@media (max-width:639px){.arch-card__img{height:200px}}
 /* 3a. Promo gelap "Kisah Utama Pekan Ini" — live memakai gradien
    from-[#382417] via-[#2a1a10] to-[#1a0f08], border #4a3322, radius 16px. */
 .home-promo{background:linear-gradient(135deg,#382417 0%,#2a1a10 50%,#1a0f08 100%);
@@ -2591,17 +2635,29 @@ __DOCS__
   }
 
   /* ---------------- card rendering ---------------- */
+  /* Kartu "Arsip Sejarah Terkini" — markup 1:1 dengan balikisah.com:
+     foto h-40 -> judul serif 18px -> excerpt 2 baris -> chip kategori ->
+     baris penulis (avatar + nama + tanggal lengkap). */
   function card(p, i){
-    var meta = esc(p.d || "");
-    if (p.author) meta = esc(p.author) + " · " + meta;
-    return '<article class="article-card">' +
-      '<a class="stretched" href="#" data-goto="article" data-post="' +
-      escAttr(p.slug || slugify(p.t)) + '" aria-label="' + esc(p.t) + '">' +
-      '<img class="article-card__img" data-photo-key="' + escAttr(p.t) + '" data-img="' + (i % CARD_IMG.length) + '" alt="" loading="lazy">' +
-      '<div class="article-card__body">' +
-      '<h3 class="article-card__title">' + esc(p.t) + '</h3>' +
-      '<p class="article-card__excerpt">' + esc(p.e) + '</p>' +
-      '<span class="article-card__date">' + meta + '</span>' +
+    var slug = p.slug || slugify(p.t);
+    var who = p.author || "Subrata";
+    var initial = who.trim().charAt(0).toUpperCase() || "B";
+    /* tanggal lengkap (hari, bulan, tahun, jam) kalau ada; kalau tidak,
+       jatuh ke bentuk pendek. */
+    var when = p.dateFull || p.d || "";
+    return '<article class="arch-card">' +
+      '<a href="#" data-goto="article" data-post="' + escAttr(slug) + '" aria-label="' + esc(p.t) + '">' +
+      '<img class="arch-card__img" data-photo-key="' + escAttr(p.t) + '" data-img="' + (i % CARD_IMG.length) + '" alt="' + esc(p.t) + '" loading="lazy">' +
+      '<div class="arch-card__body">' +
+      '<h3 class="arch-card__title">' + esc(p.t) + '</h3>' +
+      '<p class="arch-card__excerpt">' + esc(p.e) + '</p>' +
+      '<span class="arch-card__chip" data-goto="blog" data-blog="kategori" data-key="' + escAttr(p.c) + '">' + esc(p.c) + '</span>' +
+      '<div class="arch-card__byline">' +
+      '<span class="arch-card__avatar" aria-hidden="true">' + esc(initial) + '</span>' +
+      '<div>' +
+      '<p class="arch-card__who">' + esc(who) + '</p>' +
+      '<p class="arch-card__when">' + esc(when) + '</p>' +
+      '</div></div>' +
       '</div></a></article>';
   }
 
@@ -3898,6 +3954,7 @@ __DOCS__
     tags = tags.map(function(t){ return String(t).trim(); }).filter(Boolean);
     return {
       t: o.title || o.t || "", e: o.excerpt || o.e || "", d: o.date || o.d || "",
+      dateFull: o.dateFull || "",
       c: o.cat || o.c || "Kerajaan", author: (o.author || (isAdmin ? "Redaksi" : "Subrata")),
       body: o.body || "", tags: tags, views: o.views || 0, likes: o.likes || 0,
       featured: !!o.featured, pubStatus: o.pubStatus || (o.featured ? "publish" : ""),
