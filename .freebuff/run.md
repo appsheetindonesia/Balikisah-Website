@@ -1670,3 +1670,48 @@ branch dan PR dibersihkan setelah uji, `main` tak disentuh):
 4. `PUT /pulls/1/merge` → **HTTP 405**, pesan resmi dari GitHub:
    `Required status check "build-test-verify" is failing.`
 5. PR #1 ditutup tanpa merge (`merged: false`), branch remote (HTTP 204) dan lokal dihapus.
+## Efek foto artikel: warna asli terlihat saat foto disorot mouse
+
+Permintaan (9 Okt 2026): supaya saat foto artikel disorot mouse, **warna asli foto terlihat** seperti di website [balikisah.com](https://balikisah.com).
+
+**Asal efek (terukur, bukan ditiru dari ingatan).** Halaman live memakai aturan global `img` di `<style>` inline; keduanya diambil langsung dari HTML `https://balikisah.com/` yang di-`curl`:
+
+```css
+/* FILTER RETRO HOMEPAGE GLOBAL */
+img {
+  filter: sepia(.55) saturate(.45) contrast(.85) brightness(.90) hue-rotate(-10deg) !important;
+  transition: filter .4s ease, transform .4s ease;
+}
+a:hover img,
+img:hover {
+  filter: sepia(.1) saturate(.9) contrast(.98) brightness(1) !important;
+}
+```
+
+Jadi foto live berdiam dalam suasana **retro/sepia**, lalu **warna asli muncul begitu foto disentuh mouse**. Angka filter di atas disalin apa adanya, bukan dikira-kira.
+
+**Yang diterapkan di repo ini.** Nilai yang sama dipasang di `.freebuff/site_shell.html` lewat dua token CSS, supaya bisa disetel dari satu tempat:
+
+- `--photo-filter` → nilai diam (retro);
+- `--photo-filter-on` → nilai saat di-hover/fokus (warna asli).
+
+**Cakupan sengaja TIDAK selebar live.** Live menyasar semua `img`, termasuk logo, ikon SVG, dan screenshot. Di sini efek dibatasi pada **foto artikel yang dilihat pembaca**: `.article-card__img` (kartu arsip, beranda, related, blog), `.article-hero` (foto kepala artikel), foto hero beranda, `.hero-side img`, `.promo-card img`, `.side-card img`, `.galeri-card img`, `.tokoh-card img`, `.bp-card img` (daftar blog), dan `.prose__img` (gambar di dalam isi artikel).
+Konsekuensi sengaja: ikon, logo wordmark, screenshot referensi di view Bandingkan, dan thumbnail dasbor/Kelola Foto **tidak** ikut disepia — keduanya alat ukur/deviasi, bukan foto artikel, jadi warnanya harus jujur.
+
+**Hover memakai pola yang sama dengan live.** Selain hover langsung pada foto, hover/fokus pada wadahnya (`.article-card`, `.home-hero__card`, dst.) juga memunculkan warna asli, mengikuti `a:hover img` di live — kartu arsip membuat seluruh kartu jadi satu tautan, jadi meng-hover kartu wajib ikut mengubah fotonya. `:focus-within` ditambahkan supaya navigasi keyboard mendapat efek yang sama (aksesibilitas, bukan hanya mouse).
+
+**Foto gagal dimuat dikecualikan.** `watchImg()` lama yang menandai foto error (`data-load-failed`) dan aturan terakhir memastikan foto yang gagal dimuat tidak ikut direset warnanya, supaya penanda kegagalan tetap terlihat.
+
+**Verifikasi (browser asli, bukan inspeksi statis).** Diukur dengan `getComputedStyle` di Edge headless lewat Selenium, membandingkan nilai `filter` saat foto diam dan saat foto disentuh mouse:
+
+| Lokasi foto | Diam | Hover |
+|---|---|---|
+| Beranda hero, hero-side, galeri, promo, side-card, tokoh | `sepia(.55) saturate(.45) contrast(.85) brightness(.9) hue-rotate(-10deg)` | `sepia(.1) saturate(.9) contrast(.98) brightness(1)` |
+| Kartu arsip `.article-card__img` (termasuk hover kartu → foto ikut) | sama | sama |
+| Kartu related + `.article-hero` halaman artikel | sama | sama |
+| Kartu daftar blog `.bp-card img` | sama | sama |
+| Screenshot referensi view Bandingkan | `none` (tidak ikut efek, benar) | — |
+
+Semua tanda centang lolos dengan nilai persis di atas. Yang gagal dicek: `.prose__img` — gambar di dalam isi artikel memang dibuat `.prose__img`, tetapi dataset artikel bawaan tidak punya gambar markdown, jadi elemennya tidak ada untuk diukur (jumlah `0`); aturannya ikut terpasang di blok CSS yang sama dan akan berlaku begitu ada artikel bergambar.
+
+**Catatan determinisme.** Nilai filter tidak masuk ke output selain CSS biasa, dan build tidak berubah ukuran secara makna; `index.html` tetap dicocokkan byte dengan hasil build oleh cek drift di CI.

@@ -76,6 +76,10 @@
   --radius-pill:999px;
   --shadow-card:0 1px 2px rgba(40,28,18,.04);
   --shadow-cta:0 2px 6px rgba(133,77,39,.22);
+  /* Efek foto artikel (nilai terukur dari balikisah.com live): saat diam
+     foto berwarna sepia, lalu warna asli terlihat saat foto di-hover. */
+  --photo-filter:sepia(.55) saturate(.45) contrast(.85) brightness(.9) hue-rotate(-10deg);
+  --photo-filter-on:sepia(.1) saturate(.9) contrast(.98) brightness(1);
 }
 @media (max-width:1023px){ :root{ --header-h:64px; --grid-gap:20px; } }
 @media (prefers-reduced-motion:reduce){
@@ -90,6 +94,50 @@ body{margin:0;font-family:var(--font-ui);font-weight:400;color:var(--body-ink);b
 a{color:inherit;text-decoration:none}
 img{max-width:100%;display:block}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+/* ============================================================
+   FOTO ARTIKEL — efek retro saat diam, warna asli saat di-hover
+   ============================================================
+   Meniru balikisah.com live: aturan global `img` memakai
+   `filter:sepia(.55) saturate(.45) contrast(.85) brightness(.9)
+    hue-rotate(-10deg)` dan `a:hover img, img:hover` memulangkannya ke
+   `filter:sepia(.1) saturate(.9) contrast(.98) brightness(1)`. Jadi
+   begitu foto artikel disorot mouse, warna asli fotonya terlihat.
+   Cakupan sengaja DIBATASI ke foto yang dilihat pembaca:
+   kartu arsip/beranda/related, hero beranda & halaman artikel, promo,
+   sidebar populer, galeri, tokoh, kartu blog, dan gambar di dalam isi
+   artikel. Screenshot referensi view Bandingkan dan thumbnail dasbor /
+   Kelola Foto TIDAK ikut karena keduanya alat ukur, bukan foto artikel. */
+.article-card__img,.article-hero,.home-hero__card img,.hero-side img,
+.promo-card img,.side-card img,.galeri-card img,.tokoh-card img,
+.bp-card img,.prose__img{
+  filter:var(--photo-filter);
+  transition:filter .4s ease;
+}
+/* hover maupun focus-within (aksesibilitas keyboard) sama-sama memunculkan
+   warna asli; `a:hover img` mengikuti pola live untuk foto di dalam taut. */
+.article-card__img:hover,
+.article-card:hover .article-card__img,
+.article-card a:hover .article-card__img,
+.article-card:focus-within .article-card__img,
+.article-hero:hover,
+a:hover > .article-hero,
+.home-hero__card:hover img,
+.home-hero__card:focus-within img,
+.hero-side:hover img,
+.promo-card:hover img,
+.side-card:hover img,
+.galeri-card:hover img,
+.tokoh-card:hover img,
+.bp-card:hover img,
+.prose__img:hover{
+  filter:var(--photo-filter-on);
+}
+/* Foto yang gagal dimuat tidak boleh ikut direset warnanya oleh efek ini. */
+.article-card__img[data-no-filter],.article-card__img[data-load-failed],
+.tv-item__img[data-load-failed],.article-hero[data-load-failed]{
+  filter:none;
+}
 
 /* ============================================================
    NAVIGASI DEMO (bukan bagian UIRD)
