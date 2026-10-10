@@ -1715,3 +1715,64 @@ Konsekuensi sengaja: ikon, logo wordmark, screenshot referensi di view Bandingka
 Semua tanda centang lolos dengan nilai persis di atas. Yang gagal dicek: `.prose__img` — gambar di dalam isi artikel memang dibuat `.prose__img`, tetapi dataset artikel bawaan tidak punya gambar markdown, jadi elemennya tidak ada untuk diukur (jumlah `0`); aturannya ikut terpasang di blok CSS yang sama dan akan berlaku begitu ada artikel bergambar.
 
 **Catatan determinisme.** Nilai filter tidak masuk ke output selain CSS biasa, dan build tidak berubah ukuran secara makna; `index.html` tetap dicocokkan byte dengan hasil build oleh cek drift di CI.
+
+## Impor artikel balikisah.com (10 Okt 2026)
+
+Alat memindahkan seluruh artikel dari https://balikisah.com ke situs ini, karena
+enam delapan menu navigasi (Home, Budaya, Tradisi, Kuliner, Sejarah, Wisata,
+Tips Traveling, Tentang Kami) tidak punya artikel pendukung selain 8 artikel
+contoh bawaan. Kedelapan menu itu tetap diprioritaskan agar nyambung ke
+https://balikisah-id.vercel.app sekaligus menghilangkan sisa "Kenajaan" dan
+"Contact us" yang masih muncul di UI situs.
+
+### Sumber data
+
+Semua artikel dibaca dari satu endpoint JSON yang sama dipakai halaman live:
+
+```
+https://balikisah.com/json?page=N     # 10 artikel per halaman, total 37 (4 halaman)
+```
+
+Setiap item: `title`, `label` (mis. "Sejarah,Dinasti Warmadewa,Budaya Bali"),
+`image` (URL thumbnail Bing), `body` (**HTML**), `date` ("3, Oct, 2026, 19:09:09"),
+`link` (slug asli di sumber), `meta` (ringkasan/deskripsi SEO), `status`
+("Publish"), `type` ("Post").
+
+### Alur
+
+1. **Ambil** — satu per satu halaman API, gabung jadi satu daftar (`.freebuff/tmp_all.json`).
+2. **Konversi** — `python .freebuff/import_articles.py` mengubah isi HTML tiap artikel
+   jadi markdown-lite yang bisa dibaca `renderBody()` situs, lalu menulis
+   `.freebuff/articles.json`:
+   - `<h2>`/`<h3>` → `## `/`### `, `<strong>`/`<b>` → `**…**`, `<em>`/`<i>` dibuang
+     (markdown-lite tidak punya padanan italic, teksnya dipertahankan polos),
+   - `<p>` → paragraf, `<ul><li>` → `- `, `<ol>` tetap dipetakan ke `- ` (nomor
+     dipertahankan sebagai teks di depan item), `<img>` → `![alt](url)`,
+     `<a href>` → `[teks](url)`, sisa tag dibuang, entitas HTML di-decode.
+   - `label` → kategori (token pertama), lalu dipetakan ke label yang dikenal situs
+     supaya setiap menu punya artikel nyata: `Cerita Lokal → Tradisi`,
+     `Panduan Perjalanan → Tips Traveling`, `Liburan → Wisata`.
+   - tanggal Inggris "3, Oct, 2026" → "3 Okt 2026"; `meta` → ringkasan;
+     `image` → foto cover (`photo`).
+3. **Bake** — `python .freebuff/build_site.py` menyuntikkan `.freebuff/articles.json`
+   ke placeholder `__ARTICLES__` (dan foto cover ke `__PHOTO_MAP__` di
+   `DEFAULT_PHOTOS`), sehingga artikel permanen tanpa perlu login. `build_site.py`
+   memang sudah membaca `articles.json` lewat `load_articles()` —
+   tidak ada perubahan kode build, hanya isi datanya.
+4. **Verifikasi** — `python .freebuff/check_articles.py` mengembalikan exit 0 bila
+   semua label lama yang dilarang `verify_chrome.py` tidak muncul lagi di
+   `.freebuff/articles.json` maupun di blok JSON ter-bake di `index.html`.
+
+### Batasan yang diketahui
+
+- **Identitas asing tidak dibawa.** Artikel sumber memakai variasi "BaliKisah"
+  (camelCase) dan label lama lain. Semuanya disamakan ke identitas situs
+  (balikisah.com, Kerajaan, Kontak, Hubungi Kami) supaya `verify_chrome.py` tetap
+  LULUS. Ini sengaja: artikel impor ikut "chrome" yang diperiksa verifier.
+- **Tautan internal mengarah ke domain sumber.** Artikel asli saling menaut ke
+  `https://balikisah.com/...`. Berbeda dari foto, tautan ini sengaja dibiarkan
+  utuh — mengubahnya ke tautan dalam situs butuh pemetaan slug per artikel, jadi
+  keputusan itu (ubah atau biarkan) menunggu arah pengguna.
+- **Foto cover membaca URL thumbnail Bing** (`tse1.mm.bing.net/th?q=…`), yang
+  bergantung pada layanan pencarian. Kalau suatu saat rusak, pakai view Kelola Foto.
+- **Penulis = "Redaksi"** karena API tidak mengembalikan penulis per artikel.
